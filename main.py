@@ -820,7 +820,8 @@ def create_android_lr(item: AndroidLR, x_api_key: str = Header(default="")):
         now = now_iso()
         # Android's four fields are mapped into the real V43 LR record.
         # station -> city, LR -> bilty_gr_no, vehicle -> truck_no, weight -> weight.
-        sync_id = f"lr_records:{now.replace('-', '').replace(':', '').replace('.', '').replace('+', '').replace('T', '')}:{vehicle}:{lr}".upper()
+        normalized_lr = "".join(ch for ch in lr.upper() if ch.isalnum())
+        sync_id = f"lr_records:{normalized_lr}"
 
         cur.execute("""
             INSERT INTO lr_records
