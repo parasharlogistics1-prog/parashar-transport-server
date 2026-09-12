@@ -880,6 +880,37 @@ def recent(limit: int = 30, x_api_key: str = Header(default="")):
         c.close()
 
 
+@app.get("/api/lr/list")
+def lr_list(date_from: str = "", date_to: str = "", vehicle: str = "", limit: int = 200, x_api_key: str = Header(default="")):
+    auth(x_api_key)
+    limit = max(1, min(limit, 500))
+    date_from = date_from.strip()
+    date_to = date_to.strip()
+    vehicle = vehicle.strip().upper()
+    c = conn()
+    try:
+        cur = c.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        where = ["COALESCE(sync_deleted, 0) = 0"]
+        params = []
+        if date_from:
+            where.append("date >= %s")
+            params.append(date_from)
+        if date_to:
+            where.append("date <= %s")
+            params.append(date_to)
+        if vehicle:
+            where.append("UPPER(truck_no) LIKE %s")
+            params.append("%" + vehicle + "%")
+        sql = ("SELECT date, truck_no, bilty_gr_no, loading_point, city, weight, "
+               "entry_type, created_at, updated_at FROM lr_records WHERE "
+               + " AND ".join(where) + " ORDER BY date DESC, id DESC LIMIT %s")
+        params.append(limit)
+        cur.execute(sql, tuple(params))
+        return cur.fetchall()
+    finally:
+        c.close()
+
+
 @app.get("/api/lr/{lr_id}")
 def get_lr(lr_id: int, x_api_key: str = Header(default="")):
     auth(x_api_key)
