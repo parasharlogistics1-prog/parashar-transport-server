@@ -316,11 +316,19 @@ def init_full_sync_schema():
                     cur.execute(statement)
 
         # Backfill sync IDs for existing rows.
+        # Most tables use "id" as their primary key.
+        # bill_payments uses "bill_no" as its primary key.
+        primary_key_map = {
+            "bill_payments": "bill_no",
+        }
+
         for table_name in SYNC_TABLES:
+            pk_column = primary_key_map.get(table_name, "id")
+
             cur.execute(
                 f"""
                 UPDATE {table_name}
-                SET sync_id = %s || ':' || id::text
+                SET sync_id = %s || ':' || {pk_column}::text
                 WHERE sync_id IS NULL OR BTRIM(sync_id) = ''
                 """,
                 (table_name,)
@@ -337,11 +345,6 @@ def init_full_sync_schema():
         c.commit()
     finally:
         c.close()
-
-
-@app.on_event("startup")
-def startup_full_sync():
-    init_full_sync_schema()
 
 
 class SyncPushItem(BaseModel):
